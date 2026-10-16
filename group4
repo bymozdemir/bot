@@ -1,0 +1,11 @@
+test/backtestData.test.js
+test/engine.test.js
+test/finalAudit.test.js
+test/liveRecovery.test.js
+test/multiQuoteSafety.test.js
+test/paperModeRegression.test.js
+test/paperTransactionDurability.test.js
+test/priceShock.test.js
+test/strategyScanner.test.js
+test/userDataStream.test.js
+test/orderResponseGuards.test.js

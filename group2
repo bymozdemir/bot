@@ -1,0 +1,12 @@
+test/backtest.cli.test.js
+test/chaosRecovery.test.js
+test/exchangeSafety.test.js
+test/liveEngine.test.js
+test/modeSafety.test.js
+test/offlineSafety.test.js
+test/paperRedTeam4.test.js
+test/portfolioPolicy.test.js
+test/strategies.test.js
+test/trendcriteria.test.js
+test/windowsSafety.test.js
+test/newExchangesSafety.test.js

@@ -1,0 +1,20 @@
+Crypto Bot — 2.1 birleşik PAPER doğrulama adayı
+
+Durum: KOD ADAYI; canlı işlem ONAYLI DEĞİL. Canlı işlem kilidi kapalı tutulmalıdır.
+
+Bu paket yedi farklı ZIP içerik karşılaştırmasından sonra hazırlanmıştır. Karşılaştırma ve açık riskler:
+- docs/MERGE_AUDIT_2.1_TR.md
+
+Temiz kurulum / doğrulama kapıları:
+1. npm ci
+2. npm audit
+3. npm run preflight
+4. npm run test:batched
+5. npm run test:clock
+6. npm run test:server-integration
+
+`group0`–`group5` test listelerini koruyun. Bir test atlandıysa, zaman aşımına uğradıysa veya ortam nedeniyle çalışmadıysa başarılı kabul etmeyin.
+
+Bu paketin mevcut ortam doğrulaması: 84 test dosyası çalıştırıldı; 851 testten 850 geçti, 1 entegrasyon testi bağımlılıklar eksik olduğu için başarısız oldu. Temiz `npm ci`, `npm audit`, `test:clock` ve gerçek/demo borsa doğrulaması tamamlanmadı. Ayrıntılar `TEST_RESULTS_CURRENT_TR.txt` içindedir.
+
+Paribu ve Midas adaptörleri RED, diğer dokuz adaptör YELLOW durumundadır; hiçbir gerçek borsa GREEN değildir. Hiçbir borsada adaptörün varlığı tek başına canlı işlem onayı sayılmaz.

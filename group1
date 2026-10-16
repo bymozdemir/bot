@@ -1,0 +1,12 @@
+test/auth.test.js
+test/btcturk.test.js
+test/exchangeCapabilitySafety.test.js
+test/hardening16.test.js
+test/mergeRegression.test.js
+test/notify.test.js
+test/paperRedTeam3.test.js
+test/parity.test.js
+test/riskSafety.test.js
+test/timezone.test.js
+test/walkForwardTrend.test.js
+test/newExchangesPrivateGate.test.js

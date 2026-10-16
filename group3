@@ -1,0 +1,14 @@
+test/backtest.test.js
+test/dca.test.js
+test/execution.test.js
+test/liveLifecycleChaos.test.js
+test/modelChecker.test.js
+test/orderManager.test.js
+test/paperRedTeam5.test.js
+test/preApiSafety.test.js
+test/strategyGate.test.js
+test/trendv2.test.js
+test/privateExchangesStage4.test.js
+test/dailyReport.test.js
+test/telegramExtras.test.js
+test/alerts.test.js

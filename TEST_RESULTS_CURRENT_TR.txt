@@ -1,0 +1,107 @@
+GÜNCEL TEST VE DOĞRULAMA DURUMU — 2026-10-14
+
+KAPSAM
+- 76/76 test dosyası ayrı Node.js süreçlerinde çalıştırıldı.
+- Toplam 785 test: 784 geçti, 1 başarısız, 0 atlanan.
+- Başarısız test: test/serverIntegration.test.js. Express, dotenv ve ws kurulu olmadığından gerçek HTTP/WebSocket entegrasyon testi başlatılamadı. Bu sonuç kodun entegrasyon testini geçtiği anlamına gelmez.
+- test/backtest.cli.test.js ilk kısa zaman sınırında tamamlanmadı; ayrı süreçte yeniden çalıştırıldığında 5/5 geçti (yaklaşık 17 saniye).
+- test/privateExchangesStage4.test.js ilk kısa zaman sınırında tamamlanmadı; ayrı süreçte yeniden çalıştırıldığında 62/62 geçti.
+- Diğer test dosyaları ayrı süreçte geçti; bu turda atlanan test yok.
+
+TEST ALTYAPISI DÜZELTMESİ
+- scripts/runTestsBatched.js zaman aşımında yalnızca node --test üst sürecini öldürüyordu. Testlerin başlattığı alt süreçler stdout/stderr borularını açık tutabildiğinden çalıştırıcı bekleyip sonraki teste geçemeyebilirdi.
+- Çalıştırıcı, zaman aşımında süreç ağacını kapatacak şekilde düzeltildi: POSIX'te süreç grubu, Windows'ta taskkill /T /F kullanılır.
+- node --check scripts/runTestsBatched.js başarılı.
+- Projedeki JavaScript dosyalarının tamamında node --check başarılı.
+- scripts/offlinePreflight.js başarılı: paper varsayılan, canlı işlem kilidi kapalı.
+
+BAĞIMLILIKLAR
+- Temiz npm ci tamamlanmadı; kayıt defterine erişim bu çalışma ortamında zaman aşımına uğradı.
+- npm ci --offline da tamamlanamadı: ws@8.22.0 paketi yerel npm önbelleğinde bulunmuyor (ENOTCACHED).
+- Bu nedenle npm audit ve gerçek serverIntegration doğrulaması tamamlanmış değildir.
+
+AÇIK KALANLAR
+1. Ağ erişimli, temiz ortamda npm ci ve npm audit çalıştırılmalı.
+2. Ardından test/serverIntegration.test.js yeniden çalıştırılmalı ve gerçek HTTP/WebSocket akışı doğrulanmalı.
+3. test:clock ve fuzz betikleri için bu raporda yeni sonuç iddia edilmemektedir; ayrı doğrulama gereklidir.
+4. Gerçek borsa hesap/sandbox emir akışları bu mock testlerle doğrulanmış sayılmaz.
+5. Paribu emir kimliği/kurtarma sözleşmesi için önceki identity=false bulgusu kapanmış kabul edilmemelidir.
+
+GÜVENLİK DURUMU
+- Canlı işlem kilidi kapalı tutulmalı.
+- Test zaman aşımı başarı olarak sayılmaz. Zaman sınırına takılan testler ayrı süreçte yeniden çalıştırılmalı.
+
+
+EK DENETİM — 2026-10-14
+- `scripts/liveContractAudit.js` düzeltildi: `liveTradingVerified` eksik/undefined ise artık GREEN olamaz; yalnızca açık `true` doğrulama GREEN sayılır.
+- Binance, BtcTurk, Binance TR ve Paribu adaptörlerine `liveTradingVerified: false` açıkça yazıldı; gerçek/sandbox kanıtı olmadan canlı kilit kapalı kalır.
+- Simülasyon adaptörüne testlerin kendi çevrimdışı yaşam döngüsünü çalıştırabilmesi için açık `liveTradingVerified: true` verildi; bu gerçek borsa onayı değildir.
+- Seçili borsa/live güvenlik test grubu (10 test dosyası): 309/309 geçti, 0 atlanan.
+- Bu değişikliklerden sonra 76 dosyalık tam test paketinin yeniden tamamlandığı iddia edilmiyor. `npm ci`, `npm audit` ve `serverIntegration` hâlâ ayrı doğrulama gerektiriyor.
+- Audit statüsü: Paribu RED (client order identity/recovery doğrulanmadı); Midas RED (resmî API sözleşmesi yok); dokuz diğer adaptör YELLOW (kod sözleşmesi mevcut, gerçek/sandbox kanıtı eksik).
+
+
+EK DENETİM — 2026-10-14 (ADIM 2)
+- Kritik kapı düzeltmesi: LiveEngine ve OrderManager artık yalnızca `liveTradingVerified === true` ise devam eder; false/undefined/eksik bayrak fail-closed davranır.
+- Yeni regresyon testi: eksik doğrulama bayrağıyla LiveEngine ve OrderManager reddi doğrulandı.
+- Hedefli doğrulama: exchangeCapabilitySafety, newExchangesPrivateGate, liveEngine ve liveRecovery dosyaları toplam 42/42 geçti; atlanan yok.
+- `node scripts/liveContractAudit.js`: Binance, BtcTurk, Binance TR, Coinbase Exchange, Kraken, Bitstamp, OKX, OKX TR ve Bybit TR YELLOW; Paribu ve Midas RED. Hiçbir gerçek borsa GREEN değil. Komutun RED bulguları nedeniyle sıfırdan farklı çıkması beklenir.
+- Güncel borsa matrisindeki eski/çelişkili GREEN ifadeleri temizlendi; canlı doğrulama ile statik kod sözleşmesi ayrı gösteriliyor.
+- Bu hedefli testler tam test paketinin veya gerçek/sandbox API doğrulamasının tamamlandığı anlamına gelmez. `npm ci`, `npm audit`, serverIntegration, test:clock ve fuzz doğrulaması hâlâ açık.
+- `scripts/paperFuzz.js`: başarılı; 1.000.000 adım, 62.231 restart, 62.231 serialization, 658.513 lock ve 100 işlem; chaos koşusunda 9 alış, 7 satış (16 başarılı trade) gözlendi.
+- `scripts/portfolioPolicyFuzz.js`: 1.000.000 adımlık deneme 120 saniyelik çalışma sınırında tamamlanmadı; başarı sayılmıyor. Ayrı kısa doğrulama 100.000 adımda geçti (49.352 izin, 50.648 engel).
+- `scripts/testClock.js` bu adımda yeniden tamamlanmadı; altı tarih turu hâlâ ayrı doğrulama gerektiriyor.
+
+EK DENETİM — 2026-10-14 (ADIM 3)
+- `scripts/exchangeReadonlyAudit.js` düzeltildi: olmayan bir emir kimliğine herhangi bir yanıt gelmesi artık başarılı denetim sayılmıyor. Yalnızca adaptörün açıkça `orderNotFound=true` işaretli hatası beklenen sonuç.
+- Salt-okunur denetimde özel API anahtarı yoksa sonuç `PARTIAL` ve çıkış kodu 2; hata varsa `FAIL` ve çıkış kodu 1; bütün kontroller tamamlanırsa `PASS` olur. `SKIP` artık sessizce tam başarıya dönüşmez.
+- Order book denetimi pozitif fiyatları ve en iyi alışın satıştan yüksek olmamasını kontrol ediyor; ticker ve sembol kuralları için de temel yanıt doğrulamaları eklendi.
+- Koruyucu stop kodunun varlığı artık açık `protectiveStopImplemented === true` yeteneğiyle beyan ediliyor. Bilinmeyen/yazılmamış capability otomatik olarak destekleniyor sayılmıyor. Paribu ve Midas bu ölçütte RED kalıyor; diğer dokuz adaptör YELLOW (kod sözleşmesi tamam, canlı/sandbox doğrulaması yok).
+- Yeni regresyon testleri eklendi. Borsa güvenliği/adaptör test grubu: 93/93 geçti, 0 atlanan.
+- `scripts/offlinePreflight.js` yeniden geçti. `scripts/liveContractAudit.js` beklenen RED bulguları nedeniyle çıkış kodu 1 verdi: Paribu ve Midas RED; dokuz adaptör YELLOW; gerçek borsa GREEN yok.
+- Bu hedefli sonuçlar tam test paketinin, `npm ci`, `npm audit`, serverIntegration, test:clock veya tüm borsa sandbox testlerinin tamamlandığını göstermez. Bu maddeler hâlâ açık.
+
+
+EK DENETİM — 2026-10-14, ADIM 4
+- OKX SPOT emir kuralı birim uyuşmazlığı düzeltildi: `maxMktSz` artık baz varlık `maxQty` alanına aktarılmıyor.
+- OKX için `minNotionalMode: quantity-only` açıkça tanımlandı; bu mod yalnızca pozitif `minQty` ve `stepSize` mevcutken kabul ediliyor. Diğer adaptörlerde eksik minimum tutar kuralı fail-closed kalıyor.
+- Yeni `test/okxOrderRules.test.js` eklendi.
+- Hedefli test komutu: `node --test test/okxOrderRules.test.js test/newExchangesSafety.test.js test/exchangeCapabilitySafety.test.js test/orderManager.test.js` — 42 geçti, 0 başarısız, 0 atlanan.
+- Bu değişiklikten sonra tam 76 dosyalık test paketi yeniden tamamlanmış değildir. `npm ci`, `npm audit`, serverIntegration, `test:clock` ve fuzz doğrulamalarının durumu önceki rapordaki gibi açık kalır.
+- Canlı işlem kilidi kapalı kalmalıdır; OKX için de gerçek/demo hesapta emir oluşturma, sorgulama, iptal ve kurtarma akışları doğrulanmadı.
+
+EK DENETİM — 2026-10-14 (ADIM 5)
+- Binance ve Binance TR `NOTIONAL` filtrelerinde `applyMinToMarket` ve `applyMaxToMarket` artık ayrı yorumlanıyor; market emirlerinde borsanın uygulamadığı max notional filtresi yanlışlıkla zorunlu tutulmuyor.
+- Binance, Binance TR ve BtcTurk işlem dışı sembollerin kurallarını reddediyor.
+- Sembol kuralları bilinen emir türlerini bildiriyorsa koruyucu stop desteği sembol bazında hesaplanıyor. Desteklenmeyen koruyucu stopu olan sembolde alış emri gönderilmeden canlı işlem kilidi kapanıyor.
+- Hedefli test grubu (exchangeRuleSemanticsStep5, exchangeSafety, btcturk, binancetr, okxOrderRules, orderManager): 59/59 geçti, 0 başarısız, 0 atlanan.
+- Bu sonuç tam test paketi, gerçek API/testnet veya canlı doğrulaması değildir. `npm ci`, `npm audit`, serverIntegration, test:clock ve fuzz işleri hâlâ açık.
+- Adım 5 sonrası genişletilmiş birleşik hedefli test komutu (11 test dosyası): **145/145 geçti**, 0 başarısız, 0 atlanan.
+- Projedeki tüm JavaScript dosyalarında `node --check` başarılı; `scripts/offlinePreflight.js` başarılı (varsayılan paper, canlı kilit kapalı).
+- `scripts/liveContractAudit.js` çıkış kodu 1 verdiği için bu beklenen RED bulgusu olarak kaydedildi: Paribu ve Midas RED; diğer dokuz adaptör YELLOW; GREEN yok.
+
+EK DENETİM — 2026-10-14 (ADIM 6)
+- BtcTurk DELETE iptal cevabı nihai iptal kanıtı kabul edilmiyor; adaptör emri salt-okunur GET ile terminal duruma kadar izliyor.
+- DELETE otomatik tekrarlanmıyor. GET doğrulaması hata verirse sonuç belirsiz kabul ediliyor; zaman aşımında aktif/partial durum CANCELED diye sunulmuyor. Bu, canlı satışın doğrulanmamış iptalden sonra devam etmesini engelliyor.
+- Yeni `test/btcturk.test.js` regresyonları: iptal isteği sonrası CANCELED doğrulaması ve partial executedQty korunması; iptal tamamlanmazsa NEW durumunun korunması.
+- Step 6 hedefli testler ve tüm doğrulama sonuçları, aşağıdaki son çalıştırma sonuçlarıyla güncellenecektir. Gerçek BtcTurk hesabı/WebSocket channel 452 test edilmedi; canlı işlem kilidi kapalı.
+- Step 6 birleşik hedefli test komutu (11 dosya): **147 geçti, 0 başarısız, 0 atlanan** (Node test runner raporu).
+- Tüm JavaScript dosyalarında `node --check` başarılı; `node scripts/offlinePreflight.js` başarılı.
+- `node scripts/liveContractAudit.js` çıkış kodu 1: beklenen RED bulguları Paribu ve Midas; diğer dokuz adaptör YELLOW; GREEN yok. Bu bir test runner arızası değil, canlı doğrulama kapısının beklenen sonucudur.
+- Tam test paketi, temiz `npm ci`, `npm audit`, `serverIntegration`, `test:clock`, fuzz ve gerçek/sandbox borsa doğrulaması bu adımda tamamlanmadı.
+
+
+BİRLEŞTİRME VE DOĞRULAMA — 2.1 ADAYI (2026-10-15)
+- İçerik karşılaştırması: 7 ZIP arşivi incelendi; dosya adı/sürüm etiketi kronoloji kanıtı sayılmadı.
+- Temel: `bot-guncel-2.0.11.zip`; diğer varyantlardan seçilmiş koruyucu emir, uzlaştırma, atomik yazma ve test çalıştırıcı düzeltmeleri birleştirildi.
+- Ek regresyon: koruyucu emir `FILLED` bildirse de anlamlı coin kalırsa pozisyon kaydının silinmemesi ve kalan miktar için stop kurulması.
+- OrderManager: eksik/tanınmayan borsa durumu `NEW` sayılmıyor; eksik OCO bacağı mutabakat gerektiren `UNKNOWN`; geçersiz TP limitPrice borsaya gönderilmiyor.
+- `node --check`: 168 JavaScript dosyası, 0 hata.
+- `scripts/offlinePreflight.js`: başarılı; varsayılan `paper`, canlı işlem kilidi kapalı.
+- Odaklı güvenlik grubu: 91/91 geçti, 0 başarısız, 0 atlanan.
+- Tam batched paket: 84/84 test dosyası çalıştırıldı; 851 test, 850 geçti, 1 başarısız, 0 atlanan. Tek başarısız `test/serverIntegration.test.js`; `express`, `dotenv` ve `ws` eksik olduğundan gerçek HTTP/WebSocket testi çalıştırılamadı. Bu sonuç başarılı entegrasyon sayılmaz.
+- `scripts/paperFuzz.js`: 1.000.000 adım geçti; 62.231 restart, 62.231 serialization, 658.513 lock, 100 işlem; kaos koşusunda 9 alış/7 satış.
+- `scripts/portfolioPolicyFuzz.js`: 1.000.000 adım tamamlandı.
+- `scripts/liveContractAudit.js`: beklenen RED kapısı; Paribu ve Midas RED, dokuz adaptör YELLOW, hiçbir gerçek borsa GREEN değil.
+- Açık: temiz `npm ci`, `npm audit`, `test:clock` altı tarih turu, serverIntegration ve gerçek/demo borsa doğrulaması.
+- Canlı işlem kilidi kapalı kalmalıdır.
